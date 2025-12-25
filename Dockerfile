@@ -13,7 +13,6 @@ RUN apt-get update && apt-get install -y \
 RUN a2enmod rewrite
 
 # 4. Konfigurasi Apache agar mengizinkan .htaccess (MENGATASI 404)
-# Kita tambahkan instruksi agar Apache mengizinkan "AllowOverride All" pada direktori public
 RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
 
 # 5. Ganti root folder ke /public (Standar Laravel)
@@ -28,11 +27,15 @@ COPY . /var/www/html
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # 8. Install dependency Laravel (tanpa dev tools agar ringan)
-# Menambahkan --no-interaction agar proses build tidak berhenti menunggu input
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# 9. Ubah hak akses folder storage & cache (Wajib agar tidak Error 500)
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# 9. BUAT SYMLINK (Tambahkan di sini)
+# Ini agar folder storage/app/public bisa diakses via public/storage
+RUN php artisan storage:link
 
-# 10. Expose port 80
+# 10. Ubah hak akses folder storage, cache, & symlink (Update bagian ini)
+# Kita tambahkan folder public/storage agar Apache punya izin membaca link tersebut
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public/storage
+
+# 11. Expose port 80
 EXPOSE 80
