@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Exceptions\MediaException;
 use Cloudinary\Cloudinary;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -32,22 +33,30 @@ class Media
 
     public static function store(UploadedFile $file, string $folder, bool $private = false): string
     {
-        if (self::cloudinaryEnabled()) {
-            $type = $private ? 'private' : 'upload';
-            $result = self::client()->uploadApi()->upload($file->getRealPath(), [
-                'folder' => 'perpustakaan/'.$folder,
-                'type' => $type,
-                'resource_type' => 'image',
-            ]);
+        try {
+            if (self::cloudinaryEnabled()) {
+                $type = $private ? 'private' : 'upload';
+                $result = self::client()->uploadApi()->upload($file->getRealPath(), [
+                    'folder' => 'perpustakaan/'.$folder,
+                    'type' => $type,
+                    'resource_type' => 'image',
+                ]);
 
-            return "cloudinary:{$type}:{$result['public_id']}.{$result['format']}";
+                return "cloudinary:{$type}:{$result['public_id']}.{$result['format']}";
+            }
+
+            $path = $private ? $file->store($folder, 'local') : $file->store($folder, 'public');
+            if ($path === false) {
+                // Disk lokal tidak bisa ditulis, misalnya di Vercel tanpa CLOUDINARY_URL.
+                throw new \RuntimeException('Disk lokal tidak bisa ditulis dan CLOUDINARY_URL kosong.');
+            }
+
+            return $private ? 'private:'.$path : $path;
+        } catch (\Throwable $e) {
+            report($e);
+
+            throw new MediaException('Gambar gagal disimpan. Coba lagi sebentar lagi; kalau tetap gagal, hubungi petugas perpustakaan.', previous: $e);
         }
-
-        if ($private) {
-            return 'private:'.$file->store($folder, 'local');
-        }
-
-        return $file->store($folder, 'public');
     }
 
     /**

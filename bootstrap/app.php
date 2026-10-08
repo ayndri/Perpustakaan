@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\CirculationException;
+use App\Exceptions\MediaException;
 use App\Http\Middleware\SweepCirculation;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -28,4 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Aturan sirkulasi yang dilanggar bukan error: kembalikan ke halaman sebelumnya dengan pesannya.
         $exceptions->render(fn (CirculationException $e) => back()->with('error', $e->getMessage()));
         $exceptions->dontReport(CirculationException::class);
+        // Upload gagal: kembali ke formulir dengan pesan; penyebab aslinya sudah dicatat oleh Media.
+        $exceptions->render(fn (MediaException $e) => back()->withInput()->with('error', $e->getMessage()));
+        $exceptions->dontReport(MediaException::class);
     })->create();

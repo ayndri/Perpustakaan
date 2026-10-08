@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Services\Circulation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class AccessTest extends TestCase
@@ -59,6 +60,21 @@ class AccessTest extends TestCase
             ->post(route('borrow.store', $book))
             ->assertRedirect(route('books.show', $book))
             ->assertSessionHas('error');
+    }
+
+    public function test_upload_yang_gagal_kembali_ke_formulir_dengan_pesan(): void
+    {
+        // Konfigurasi yang salah ketik (misalnya hanya API secret) tidak boleh berujung 500.
+        config(['services.cloudinary.url' => 'hanya-secret-tanpa-format']);
+        $student = $this->student(['verification_status' => 'none']);
+
+        $this->actingAs($student, 'student')
+            ->from(route('verification.index'))
+            ->post(route('verification.store'), ['ktm_image' => UploadedFile::fake()->image('ktm.png')])
+            ->assertRedirect(route('verification.index'))
+            ->assertSessionHas('error');
+
+        $this->assertNull($student->fresh()->ktm_image);
     }
 
     public function test_admin_menyerahkan_dan_menerima_buku_lewat_meja(): void
