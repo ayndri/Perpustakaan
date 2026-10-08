@@ -104,5 +104,11 @@
                 @endforeach
             </div>
         </section>
+
+        @php($storage = \App\Support\Media::status())
+        <p class="mt-10 flex items-start gap-2 border-t border-line pt-4 text-xs {{ $storage['state'] === 'cloudinary' ? 'text-muted' : 'text-danger' }}">
+            <x-icon :name="$storage['state'] === 'cloudinary' ? 'check' : 'alert'" :size="14" class="mt-px" />
+            <span><span class="font-semibold">Penyimpanan gambar:</span> {{ $storage['detail'] }}</span>
+        </p>
     </div>
 </x-layouts.admin>

@@ -28,7 +28,28 @@ class Media
 
     public static function cloudinaryEnabled(): bool
     {
-        return filled(config('services.cloudinary.url'));
+        return self::cloudinaryUrl() !== '';
+    }
+
+    /**
+     * Keadaan konfigurasi penyimpanan, untuk ditampilkan ke admin tanpa membuka rahasia.
+     *
+     * @return array{state: 'cloudinary'|'invalid'|'local', detail: string}
+     */
+    public static function status(): array
+    {
+        $url = self::cloudinaryUrl();
+
+        if ($url === '') {
+            return ['state' => 'local', 'detail' => 'CLOUDINARY_URL kosong; gambar disimpan di disk server (tidak bisa di Vercel).'];
+        }
+
+        $parts = parse_url(trim($url));
+        if (($parts['scheme'] ?? null) !== 'cloudinary' || empty($parts['user']) || empty($parts['pass']) || empty($parts['host'])) {
+            return ['state' => 'invalid', 'detail' => 'CLOUDINARY_URL terbaca tapi formatnya salah. Harus cloudinary://API_KEY:API_SECRET@CLOUD_NAME.'];
+        }
+
+        return ['state' => 'cloudinary', 'detail' => 'Cloudinary, cloud "'.$parts['host'].'", API key berakhiran …'.substr($parts['user'], -4).'.'];
     }
 
     public static function store(UploadedFile $file, string $folder, bool $private = false): string
@@ -133,8 +154,16 @@ class Media
         }
     }
 
+    /** Nilai CLOUDINARY_URL tanpa spasi dan tanpa awalan "CLOUDINARY_URL=" yang sering ikut tertempel. */
+    private static function cloudinaryUrl(): string
+    {
+        $url = trim((string) config('services.cloudinary.url'), " \t\n\r\"'");
+
+        return preg_replace('/^CLOUDINARY_URL\s*=\s*/i', '', $url);
+    }
+
     private static function client(): Cloudinary
     {
-        return new Cloudinary(config('services.cloudinary.url'));
+        return new Cloudinary(self::cloudinaryUrl());
     }
 }
