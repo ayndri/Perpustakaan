@@ -66,8 +66,8 @@ class BookController extends Controller
         $data = $this->validated($request, $book);
 
         if ($request->hasFile('cover')) {
-            Media::delete($book->cover);
             $data['cover'] = Media::store($request->file('cover'), 'covers');
+            Media::delete($book->cover);
         }
 
         // Stok tidak ditulis langsung: tambahan eksemplar harus melayani antrean dulu.

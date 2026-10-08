@@ -52,8 +52,9 @@ class ProfileController extends Controller
         $student->fill(collect($data)->only('name', 'email', 'gender')->all());
 
         if ($request->hasFile('photo')) {
-            Media::delete($student->photo);
+            $old = $student->photo;
             $student->photo = Media::store($request->file('photo'), 'profile_photos');
+            Media::delete($old);
         }
 
         if ($request->filled('password')) {

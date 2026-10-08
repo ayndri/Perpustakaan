@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Services\Circulation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AccessTest extends TestCase
@@ -66,7 +67,9 @@ class AccessTest extends TestCase
     {
         // Konfigurasi yang salah ketik (misalnya hanya API secret) tidak boleh berujung 500.
         config(['services.cloudinary.url' => 'hanya-secret-tanpa-format']);
-        $student = $this->student(['verification_status' => 'none']);
+        Storage::fake('local');
+        Storage::disk('local')->put('ktm/lama.png', 'isi');
+        $student = $this->student(['verification_status' => 'rejected', 'ktm_image' => 'private:ktm/lama.png']);
 
         $this->actingAs($student, 'student')
             ->from(route('verification.index'))
@@ -74,7 +77,9 @@ class AccessTest extends TestCase
             ->assertRedirect(route('verification.index'))
             ->assertSessionHas('error');
 
-        $this->assertNull($student->fresh()->ktm_image);
+        // KTM lama tidak boleh ikut hilang hanya karena upload yang baru gagal.
+        $this->assertSame('private:ktm/lama.png', $student->fresh()->ktm_image);
+        Storage::disk('local')->assertExists('ktm/lama.png');
     }
 
     public function test_admin_menyerahkan_dan_menerima_buku_lewat_meja(): void

@@ -116,23 +116,21 @@ class Media
             return;
         }
 
-        if (Str::startsWith($key, 'cloudinary:')) {
-            if (! self::cloudinaryEnabled()) {
-                return;
+        // Menghapus file lama hanya beres-beres: kalau gagal, catat saja, jangan gagalkan request.
+        try {
+            if (Str::startsWith($key, 'cloudinary:')) {
+                if (self::cloudinaryEnabled()) {
+                    [, $type, $path] = explode(':', $key, 3);
+                    self::client()->uploadApi()->destroy(Str::beforeLast($path, '.'), ['type' => $type]);
+                }
+            } elseif (Str::startsWith($key, 'private:')) {
+                Storage::disk('local')->delete(Str::after($key, 'private:'));
+            } else {
+                Storage::disk('public')->delete($key);
             }
-            [, $type, $path] = explode(':', $key, 3);
-            self::client()->uploadApi()->destroy(Str::beforeLast($path, '.'), ['type' => $type]);
-
-            return;
+        } catch (\Throwable $e) {
+            report($e);
         }
-
-        if (Str::startsWith($key, 'private:')) {
-            Storage::disk('local')->delete(Str::after($key, 'private:'));
-
-            return;
-        }
-
-        Storage::disk('public')->delete($key);
     }
 
     private static function client(): Cloudinary

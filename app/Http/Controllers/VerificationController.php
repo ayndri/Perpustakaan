@@ -24,14 +24,15 @@ class VerificationController extends Controller
             return back()->with('error', 'Akunmu sudah terverifikasi.');
         }
 
-        Media::delete($student->ktm_image);
-
         // KTM memuat data pribadi, jadi selalu disimpan privat dan hanya bisa dibuka admin.
+        // File lama baru dihapus setelah yang baru tersimpan, supaya upload gagal tidak menghilangkannya.
+        $old = $student->ktm_image;
         $student->update([
             'ktm_image' => Media::store($request->file('ktm_image'), 'ktm', private: true),
             'verification_status' => 'pending',
             'rejection_reason' => null,
         ]);
+        Media::delete($old);
 
         return back()->with('success', 'KTM terkirim. Admin biasanya memeriksa dalam satu hari kerja.');
     }
