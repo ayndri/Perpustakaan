@@ -2,69 +2,58 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\BookRequest;
-use App\Models\Borrowing;
+use App\Models\Reservation;
+use App\Support\Media;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
 {
     public function index()
     {
-        $student = Auth::guard('student')->user();
+        $student = auth('student')->user();
 
-        $pendingBorrows = Borrowing::with('book')
-            ->where('student_id', $student->id)
-            ->where('status', 'pending')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $loans = $student->borrowings()->with('book')->latest()->get();
+        $queueLengths = Reservation::where('status', 'waiting')
+            ->whereIn('book_id', $loans->where('status', 'active')->pluck('book_id'))
+            ->pluck('book_id')
+            ->countBy();
 
-        $activeBorrows = Borrowing::with('book')
-            ->where('student_id', $student->id)
-            ->whereIn('status', ['active', 'return_pending'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        return view('profile.index', [
+            'student' => $student,
+            'tickets' => $loans->where('status', 'pending'),
+            'active' => $loans->where('status', 'active')->sortBy('due_at'),
+            'history' => $loans->whereIn('status', ['returned', 'expired', 'rejected', 'cancelled'])->take(20),
+            'outstandingFine' => $student->outstandingFine(),
+            'queueLengths' => $queueLengths,
+            'reservations' => $student->reservations()->with('book')->where('status', 'waiting')->oldest()->get(),
+            'notifications' => $student->unreadNotifications()->take(5)->get(),
+            'requests' => $student->bookRequests()->latest()->take(3)->get(),
+        ]);
+    }
 
-        $historyBorrows = Borrowing::with('book')
-            ->where('student_id', $student->id)
-            ->whereIn('status', ['returned', 'rejected'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        $myRequests = BookRequest::where('student_id', $student->id)
-            ->whereIn('status', ['pending', 'approved', 'available'])
-            ->orderBy('created_at', 'desc')
-            ->take(3)
-            ->get();
-
-        return view('profile', compact('student', 'pendingBorrows', 'activeBorrows', 'historyBorrows', 'myRequests'));
+    public function edit()
+    {
+        return view('profile.edit', ['student' => auth('student')->user()]);
     }
 
     public function update(Request $request)
     {
-        $student = Auth::guard('student')->user();
+        $student = auth('student')->user();
 
-        $request->validate([
+        $data = $request->validate([
             'name' => 'required|string|max:255',
-            'photo' => 'nullable|image|max:2048',
-            'password' => 'nullable|min:6|confirmed',
+            'email' => 'required|email|unique:students,email,'.$student->id,
             'gender' => 'required|in:L,P',
-            'email' => 'required|email|unique:students,email,' . $student->id,
+            'photo' => 'nullable|image|max:2048',
+            'password' => 'nullable|min:8|confirmed',
         ]);
 
-        $student->name = $request->name;
-        $student->email = $request->email;
-        $student->gender = $request->gender;
+        $student->fill(collect($data)->only('name', 'email', 'gender')->all());
 
         if ($request->hasFile('photo')) {
-            if ($student->photo && Storage::disk('public')->exists($student->photo)) {
-                Storage::disk('public')->delete($student->photo);
-            }
-
-            $path = $request->file('photo')->store('profile_photos', 'public');
-            $student->photo = $path;
+            Media::delete($student->photo);
+            $student->photo = Media::store($request->file('photo'), 'profile_photos');
         }
 
         if ($request->filled('password')) {
@@ -73,16 +62,12 @@ class ProfileController extends Controller
 
         $student->save();
 
-        return redirect()->route('profile')->with('success', 'Profil berhasil diperbarui!');
+        return redirect()->route('profile')->with('success', 'Profil diperbarui.');
     }
 
-    public function markAsRead($id)
+    public function markAsRead(string $id)
     {
-        $notification = auth('student')->user()->notifications()->where('id', $id)->first();
-
-        if ($notification) {
-            $notification->markAsRead();
-        }
+        auth('student')->user()->notifications()->whereKey($id)->first()?->markAsRead();
 
         return back();
     }

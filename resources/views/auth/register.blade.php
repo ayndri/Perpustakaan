@@ -1,46 +1,50 @@
-@extends('layout')
+<x-layouts.auth title="Daftar anggota" class="max-w-lg">
+    <div>
+        <h1 class="text-3xl font-semibold">Daftar anggota</h1>
+        <p class="mt-1 text-sm text-muted">Setelah mendaftar, unggah KTM untuk verifikasi. Peminjaman dibuka begitu admin menyetujui.</p>
 
-@section('title', 'Daftar Akun - Perpustakaan')
+        <form method="POST" action="{{ route('register') }}" class="card-pad mt-6 space-y-4">
+            @csrf
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label for="nim" class="label">NIM</label>
+                    <input id="nim" name="nim" value="{{ old('nim') }}" class="input font-mono" required inputmode="numeric" autocomplete="off">
+                </div>
+                <div>
+                    <label for="jurusan" class="label">Program studi</label>
+                    <input id="jurusan" name="jurusan" value="{{ old('jurusan') }}" class="input" required placeholder="Contoh: Teknik Informatika">
+                </div>
+            </div>
+            <div>
+                <label for="name" class="label">Nama lengkap</label>
+                <input id="name" name="name" value="{{ old('name') }}" class="input" required autocomplete="name">
+                <p class="hint">Sesuai yang tertulis di KTM.</p>
+            </div>
+            <div>
+                <label for="email" class="label">Email</label>
+                <input id="email" name="email" type="email" value="{{ old('email') }}" class="input" required autocomplete="email">
+            </div>
+            <fieldset>
+                <legend class="label">Jenis kelamin</legend>
+                <div class="flex gap-5 text-sm">
+                    <label class="flex items-center gap-2"><input type="radio" name="gender" value="P" @checked(old('gender') === 'P') class="accent-brand" required> Perempuan</label>
+                    <label class="flex items-center gap-2"><input type="radio" name="gender" value="L" @checked(old('gender') === 'L') class="accent-brand"> Laki-laki</label>
+                </div>
+            </fieldset>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label for="password" class="label">Password</label>
+                    <input id="password" name="password" type="password" class="input" required minlength="8" autocomplete="new-password">
+                    <p class="hint">Minimal 8 karakter.</p>
+                </div>
+                <div>
+                    <label for="password_confirmation" class="label">Ulangi password</label>
+                    <input id="password_confirmation" name="password_confirmation" type="password" class="input" required autocomplete="new-password">
+                </div>
+            </div>
+            <button class="btn-primary w-full">Daftar</button>
+        </form>
 
-@section('content')
-<div class="auth-container">
-    <div class="auth-header">
-        <h2>Buat Akun Baru</h2>
-        <p>Bergabunglah untuk meminjam buku favoritmu</p>
+        <p class="mt-4 text-center text-sm text-muted">Sudah punya akun? <a href="{{ route('login') }}" class="font-semibold text-brand">Masuk</a></p>
     </div>
-
-    <form action="{{ route('register') }}" method="POST" class="auth-form">
-        @csrf
-
-        <label class="form-label">Nama Lengkap</label>
-        <input type="text" name="name" class="form-control" placeholder="Contoh: Budi Santoso" value="{{ old('name') }}" required>
-
-        <label class="form-label">NIM</label>
-        <input type="text" name="nim" class="form-control" placeholder="Nomor Induk Mahasiswa" value="{{ old('nim') }}" required>
-
-        <label class="form-label">Jenis Kelamin</label>
-        <select name="gender" class="form-control" required>
-            <option value="" disabled {{ old('gender') ? '' : 'selected' }}>Pilih Jenis Kelamin</option>
-            <option value="L" {{ old('gender') == 'L' ? 'selected' : '' }}>Laki-laki</option>
-            <option value="P" {{ old('gender') == 'P' ? 'selected' : '' }}>Perempuan</option>
-        </select>
-        <label class="form-label">Jurusan</label>
-        <input type="text" name="jurusan" class="form-control" placeholder="Contoh: Teknik Informatika" value="{{ old('jurusan') }}" required>
-
-        <label class="form-label">Email Kampus</label>
-        <input type="email" name="email" class="form-control" placeholder="nama@student.kampus.ac.id" value="{{ old('email') }}" required>
-
-        <label class="form-label">Password</label>
-        <input type="password" name="password" class="form-control" placeholder="Minimal 6 karakter" required>
-
-        <label class="form-label">Konfirmasi Password</label>
-        <input type="password" name="password_confirmation" class="form-control" placeholder="Ulangi password" required>
-
-        <button type="submit" class="btn-auth">Daftar Sekarang</button>
-    </form>
-
-    <div class="auth-footer">
-        Sudah punya akun? <a href="{{ route('login') }}">Masuk di sini</a>
-    </div>
-</div>
-@endsection
+</x-layouts.auth>

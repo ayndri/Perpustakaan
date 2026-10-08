@@ -1,102 +1,42 @@
-@extends('admin.layout')
+<x-layouts.admin title="Daftarkan anggota">
+    <div class="max-w-xl">
+        <a href="{{ route('admin.students.index') }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-muted no-underline hover:text-ink">
+            <x-icon name="arrow-left" :size="16" /> Anggota
+        </a>
+        <h1 class="mt-4 text-3xl font-semibold">Daftarkan anggota</h1>
+        <p class="mt-1 text-sm text-muted">Untuk mahasiswa yang mendaftar langsung di meja dengan menunjukkan KTM. Akun langsung terverifikasi, dan password sementara ditampilkan sekali setelah disimpan.</p>
 
-@section('content')
-
-<h1 class="h3 mb-4 text-gray-800 font-weight-bold">Input Mahasiswa Offline</h1>
-
-@if(session('success'))
-<div class="alert alert-success border-left-success shadow-sm">
-    <i class="fas fa-check-circle mr-2"></i> {{ session('success') }}
-</div>
-@endif
-
-<div class="row">
-    <div class="col-lg-6">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Form Pendaftaran Mahasiswa</h6>
+        <form method="POST" action="{{ route('admin.students.store') }}" class="card-pad mt-6 space-y-4">
+            @csrf
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label for="nim" class="label">NIM</label>
+                    <input id="nim" name="nim" value="{{ old('nim') }}" class="input font-mono" required>
+                </div>
+                <div>
+                    <label for="jurusan" class="label">Program studi</label>
+                    <input id="jurusan" name="jurusan" value="{{ old('jurusan') }}" class="input" required>
+                </div>
             </div>
-            <div class="card-body">
-                <form action="{{ route('admin.students.store') }}" method="POST">
-                    @csrf
-
-                    <div class="form-group">
-                        <label class="font-weight-bold">Nama Lengkap</label>
-                        <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" required>
-                        @error('name')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="form-group">
-                        <label class="font-weight-bold">Alamat Email</label>
-                        <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}" placeholder="contoh@mahasiswa.univ.ac.id" required>
-                        @error('email')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="form-group">
-                        <label class="font-weight-bold">NIM / NBI</label>
-                        <input type="text" name="nim" class="form-control @error('nim') is-invalid @enderror" value="{{ old('nim') }}" required>
-                        @error('nim')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="form-group">
-                        <label class="font-weight-bold">Jenis Kelamin</label>
-                        <select name="gender" class="form-control @error('gender') is-invalid @enderror" required>
-                            <option value="">-- Pilih Jenis Kelamin --</option>
-                            <option value="L" {{ old('gender') == 'L' ? 'selected' : '' }}>Laki-laki</option>
-                            <option value="P" {{ old('gender') == 'P' ? 'selected' : '' }}>Perempuan</option>
-                        </select>
-                        @error('gender')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-                    <div class="form-group">
-                        <label class="font-weight-bold">Jurusan</label>
-                        <select name="jurusan" class="form-control @error('jurusan') is-invalid @enderror">
-                            <option value="">-- Pilih Jurusan --</option>
-                            <option value="Teknik Informatika">Teknik Informatika</option>
-                            <option value="Sistem Informasi">Sistem Informasi</option>
-                            <option value="Teknik Sipil">Teknik Sipil</option>
-                            <option value="Manajemen">Manajemen</option>
-                            <option value="Akuntansi">Akuntansi</option>
-                        </select>
-                        @error('jurusan')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="alert alert-warning">
-                        <i class="fas fa-key mr-1"></i> Password akun akan diset otomatis menjadi: <strong>password123</strong>
-                    </div>
-
-                    <hr>
-
-                    <button type="submit" class="btn btn-primary btn-block font-weight-bold">
-                        <i class="fas fa-save mr-2"></i> Daftarkan Mahasiswa
-                    </button>
-                </form>
+            <div>
+                <label for="name" class="label">Nama lengkap</label>
+                <input id="name" name="name" value="{{ old('name') }}" class="input" required>
             </div>
-        </div>
+            <div>
+                <label for="email" class="label">Email</label>
+                <input id="email" name="email" type="email" value="{{ old('email') }}" class="input" required>
+            </div>
+            <fieldset>
+                <legend class="label">Jenis kelamin</legend>
+                <div class="flex gap-5 text-sm">
+                    <label class="flex items-center gap-2"><input type="radio" name="gender" value="P" @checked(old('gender') === 'P') class="accent-brand" required> Perempuan</label>
+                    <label class="flex items-center gap-2"><input type="radio" name="gender" value="L" @checked(old('gender') === 'L') class="accent-brand"> Laki-laki</label>
+                </div>
+            </fieldset>
+            <div class="flex justify-end gap-2">
+                <a href="{{ route('admin.students.index') }}" class="btn-secondary">Batal</a>
+                <button class="btn-primary">Daftarkan</button>
+            </div>
+        </form>
     </div>
-
-    <div class="col-lg-6">
-        <div class="card shadow mb-4 border-left-info">
-            <div class="card-body">
-                <h5 class="font-weight-bold text-info"><i class="fas fa-info-circle"></i> Catatan Admin</h5>
-                <p>Fitur ini digunakan untuk mendaftarkan mahasiswa yang datang langsung ke perpustakaan.</p>
-                <ul class="pl-3">
-                    <li>Akun yang dibuat di sini akan otomatis berstatus <span class="badge badge-success">Verified</span>.</li>
-                    <li>Mahasiswa tidak perlu mengunggah KTM lagi.</li>
-                    <li>Berikan email/NIM dan password kepada mahasiswa agar mereka bisa login.</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-
-@endsection
+</x-layouts.admin>

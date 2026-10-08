@@ -3,32 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Models\Book;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class FavoriteController extends Controller
 {
     public function index()
     {
-        $student = Auth::guard('student')->user();
-        $favorites = $student->favorites()->latest()->get();
-
-        return view('favorites.index', compact('favorites'));
+        return view('favorites.index', [
+            'favorites' => auth('student')->user()->favorites()->with('category')->withAvg('reviews', 'rating')->withCount('reviews')->latest('favorites.created_at')->get(),
+        ]);
     }
 
-    public function toggle($bookId)
+    public function toggle(Book $book)
     {
-        $student = Auth::guard('student')->user();
-        $book = Book::findOrFail($bookId);
+        $result = auth('student')->user()->favorites()->toggle($book->id);
 
-        if ($student->favorites()->where('book_id', $bookId)->exists()) {
-            $student->favorites()->detach($bookId);
-            $message = 'Buku dihapus dari koleksi favorit.';
-        } else {
-            $student->favorites()->attach($bookId);
-            $message = 'Buku ditambahkan ke koleksi favorit!';
-        }
-
-        return back()->with('success', $message);
+        return back()->with('success', $result['attached']
+            ? 'Disimpan ke daftar bacaan.'
+            : 'Dihapus dari daftar bacaan.');
     }
 }

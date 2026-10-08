@@ -4,70 +4,67 @@ namespace App\Http\Controllers;
 
 use App\Models\Book;
 use App\Models\Category;
+use App\Services\Circulation;
 use Illuminate\Http\Request;
 
 class BookController extends Controller
 {
-    private $books = [
-        [
-            'id' => 1,
-            'title' => 'Belajar Laravel untuk Pemula',
-            'author' => 'Budi Santoso',
-            'year' => 2023,
-            'category' => 'Pemrograman'
-        ],
-        [
-            'id' => 2,
-            'title' => 'Algoritma dan Struktur Data',
-            'author' => 'Rina Kurnia',
-            'year' => 2022,
-            'category' => 'Akademik'
-        ],
-        [
-            'id' => 3,
-            'title' => 'Sistem Basis Data',
-            'author' => 'Andi Wijaya',
-            'year' => 2021,
-            'category' => 'Teknologi'
-        ]
-    ];
-
-    // public function index()
-    // {
-    //     return view('books.index', ['books' => $this->books]);
-    // }
-
-    // public function show($id)
-    // {
-    //     $book = collect($this->books)->firstWhere('id', $id);
-
-    //     if (!$book) {
-    //         abort(404);
-    //     }
-
-    //     return view('books.show', ['book' => $book]);
-    // }
-
     public function index(Request $request)
     {
-        $query = Book::with('category');
+        $search = trim((string) $request->query('q'));
 
-        if ($request->has('search') && $request->search != '') {
-            $query->where('title', 'like', '%' . $request->search . '%');
-        }
+        $books = Book::with('category')
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
+            ->when($search !== '', fn ($q) => $q->where(fn ($q) => $q
+                ->whereLike('title', "%{$search}%")
+                ->orWhereLike('author', "%{$search}%")
+                ->orWhereLike('isbn', "%{$search}%")))
+            ->when($request->query('category'), fn ($q, $id) => $q->where('category_id', $id))
+            ->when($request->query('available') === 'shelf', fn ($q) => $q->where('stock', '>', 0))
+            ->when($request->query('available') === 'ebook', fn ($q) => $q->whereNotNull('digital_link'))
+            ->orderBy('title')
+            ->paginate(12)
+            ->withQueryString();
 
-        if ($request->has('category') && $request->category != '') {
-            $query->where('category_id', $request->category);
-        }
-        $books = $query->latest()->paginate(8);
-        $categories = Category::all();
-
-        return view('books.index', compact('books', 'categories'));
+        return view('books.index', [
+            'books' => $books,
+            'categories' => Category::orderBy('name')->get(),
+            'search' => $search,
+        ]);
     }
 
-    public function show($id)
+    public function show(Book $book, Circulation $circulation)
     {
-        $book = Book::with('category')->findOrFail($id);
-        return view('books.show', compact('book'));
+        $book->load(['category', 'reviews.student'])->loadAvg('reviews', 'rating');
+
+        $student = auth('student')->user();
+        $mine = null;
+
+        if ($student) {
+            $reservation = $student->reservations()->where('book_id', $book->id)->where('status', 'waiting')->first();
+
+            $mine = [
+                'loan' => $student->borrowings()->open()->where('book_id', $book->id)->latest()->first(),
+                'reservation' => $reservation,
+                'position' => $reservation?->position(),
+                'favorite' => $student->favorites()->where('book_id', $book->id)->exists(),
+                'canReview' => $student->borrowings()->where('book_id', $book->id)->where('status', 'returned')->exists()
+                    && ! $book->reviews->contains('student_id', $student->id),
+            ];
+        }
+
+        $related = Book::where('category_id', $book->category_id)
+            ->whereKeyNot($book->id)
+            ->inRandomOrder()
+            ->take(4)
+            ->get();
+
+        return view('books.show', [
+            'book' => $book,
+            'queue' => $circulation->queueLength($book->id),
+            'mine' => $mine,
+            'related' => $related,
+        ]);
     }
 }

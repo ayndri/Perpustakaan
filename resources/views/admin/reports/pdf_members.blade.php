@@ -1,143 +1,37 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="id">
 <head>
-    <title>Laporan Data Anggota</title>
+    <meta charset="utf-8">
+    <title>Laporan anggota</title>
     <style>
-        body {
-            font-family: sans-serif;
-            font-size: 10pt;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .header h2 {
-            margin: 0;
-            text-transform: uppercase;
-        }
-
-        .header p {
-            margin: 5px 0;
-            color: #555;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        th,
-        td {
-            border: 1px solid #444;
-            padding: 6px 8px;
-            text-align: left;
-            vertical-align: middle;
-        }
-
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-            text-align: center;
-        }
-
-        /* Styling khusus kolom */
-        .col-no {
-            width: 5%;
-            text-align: center;
-        }
-
-        .col-nim {
-            width: 15%;
-            text-align: center;
-        }
-
-        .col-jurusan {
-            width: 20%;
-        }
-
-        .col-status {
-            width: 10%;
-            text-align: center;
-        }
-
-        .badge-verified {
-            color: green;
-            font-weight: bold;
-        }
-
-        .badge-unverified {
-            color: red;
-            font-style: italic;
-        }
-
-        .footer {
-            margin-top: 40px;
-            text-align: right;
-            page-break-inside: avoid;
-        }
+        @page { margin: 32px 36px; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 10pt; color: #1d2622; }
+        h1 { font-size: 15pt; margin: 0; color: #1f4d3a; }
+        .meta { color: #5f6963; margin: 4px 0 14px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #efe9dc; text-align: left; padding: 6px 8px; font-size: 9pt; border-bottom: 1px solid #cfc3aa; }
+        td { padding: 6px 8px; border-bottom: 1px solid #e2d9c6; }
+        .mono { font-family: 'DejaVu Sans Mono', monospace; }
     </style>
 </head>
-
 <body>
-
-    <div class="header">
-        <h2>PERPUSTAKAAN KAMPUS</h2>
-        <p>Jl. Pendidikan No. 123, Kota Coding, Indonesia</p>
-        <hr>
-        <h3>LAPORAN DATA ANGGOTA</h3>
-        @if($jurusan && $jurusan != 'Semua')
-        <p>Filter Jurusan: <strong>{{ $jurusan }}</strong></p>
-        @else
-        <p>Kategori: Semua Jurusan</p>
-        @endif
-        <p style="font-size: 9pt;">Dicetak pada: {{ date('d M Y, H:i') }} WIB</p>
-    </div>
+    <h1>Daftar anggota PerpusKampus</h1>
+    <p class="meta">{{ $jurusan ?: 'Semua program studi' }} · {{ $students->count() }} anggota · dicetak {{ now()->translatedFormat('j F Y, H.i') }}</p>
 
     <table>
-        <thead>
-            <tr>
-                <th class="col-no">No</th>
-                <th class="col-nim">NIM / NBI</th>
-                <th>Nama Lengkap</th>
-                <th>Email</th>
-                <th class="col-jurusan">Jurusan</th>
-                <th class="col-status">Status</th>
-                <th>Tgl Daftar</th>
-            </tr>
-        </thead>
+        <thead><tr><th>No</th><th>NIM</th><th>Nama</th><th>Program studi</th><th>L/P</th><th>Status</th></tr></thead>
         <tbody>
-            @foreach($students as $index => $s)
-            <tr>
-                <td class="col-no">{{ $index + 1 }}</td>
-                <td class="col-nim" style="font-family: monospace; font-size: 11pt;">{{ $s->nim }}</td>
-                <td>
-                    {{ strtoupper($s->name) }}
-                </td>
-                <td>{{ $s->email }}</td>
-                <td>{{ $s->jurusan }}</td>
-                <td class="col-status">
-                    @if($s->verification_status == 'verified')
-                    <span class="badge-verified">Aktif</span>
-                    @else
-                    <span class="badge-unverified">Pending</span>
-                    @endif
-                </td>
-                <td>{{ $s->created_at->format('d/m/Y') }}</td>
-            </tr>
+            @foreach ($students as $i => $s)
+                <tr>
+                    <td>{{ $i + 1 }}</td>
+                    <td class="mono">{{ $s->nim }}</td>
+                    <td>{{ $s->name }}</td>
+                    <td>{{ $s->jurusan }}</td>
+                    <td>{{ $s->gender }}</td>
+                    <td>{{ ['verified' => 'Terverifikasi', 'pending' => 'Menunggu', 'rejected' => 'Ditolak', 'none' => 'Belum unggah KTM'][$s->verification_status] }}</td>
+                </tr>
             @endforeach
         </tbody>
     </table>
-
-    <div class="footer">
-        <p>Mengetahui,</p>
-        <br><br><br>
-        <p>( _______________________ )<br>Kepala Administrasi</p>
-    </div>
-
 </body>
-
 </html>

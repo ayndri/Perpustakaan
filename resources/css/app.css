@@ -1,11 +1,167 @@
 @import 'tailwindcss';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
+@source '../views/**/*.blade.php';
+@source '../../app/**/*.php';
+
+/*
+ * PerpusKampus — sistem desain
+ *
+ * Arah: aplikasi rak buku. Latar putih supaya warna sampul buku yang jadi pusat perhatian,
+ * menu dan kategori di sidebar kiri, rak horizontal di beranda.
+ * Warna utama biru tinta (seperti tinta stempel perpustakaan) untuk navigasi dan aksi.
+ * Amber hanya untuk rating bintang dan tanggal jatuh tempo; merah hanya untuk telat dan denda.
+ *
+ * Kontras (WCAG): ink 17.7:1, ink-2 7.6:1, muted >=4.6:1 di putih dan paper-2;
+ * teks putih di brand 10:1; amber teks 5:1; bintang (grafis) 3.5:1.
+ *
+ * Huruf: Plus Jakarta Sans (dirancang untuk identitas kota Jakarta) untuk semua teks.
+ * Bentuk: radius 4/8px, kartu datar dengan garis, bayangan hanya untuk sampul dan menu mengambang.
+ * Gerak: hanya transisi hover/focus.
+ */
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+    --color-paper: #ffffff;
+    --color-paper-2: #f6f7f9;
+    --color-surface: #ffffff;
+    --color-line: #e6e8ec;
+    --color-line-strong: #d3d7de;
+
+    --color-ink: #111827;
+    --color-ink-2: #4b5563;
+    --color-muted: #5e6573;
+
+    --color-brand: #23407a;
+    --color-brand-hover: #1a3162;
+    --color-brand-tint: #e9eef8;
+    --color-brand-soft: #c9d4ea;
+
+    --color-brass: #b45309;
+    --color-brass-tint: #fef3e2;
+    --color-star: #c77700;
+
+    --color-danger: #b42318;
+    --color-danger-tint: #feeceb;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+}
+
+@layer base {
+    html {
+        -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+        @apply bg-paper text-ink font-sans antialiased;
+        font-feature-settings: 'ss01';
+    }
+
+    h1, h2, h3 {
+        @apply font-bold text-ink;
+        letter-spacing: -0.02em;
+    }
+
+    a {
+        @apply underline-offset-2;
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--color-brand);
+        outline-offset: 2px;
+    }
+
+    ::selection {
+        background: var(--color-brand-soft);
+    }
+}
+
+/* Komponen didefinisikan sebagai @utility supaya bisa saling @apply (aturan Tailwind v4). */
+
+/* Tombol */
+@utility btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold
+        transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 min-h-10;
+}
+@utility btn-primary { @apply btn bg-brand text-white no-underline hover:bg-brand-hover; }
+@utility btn-secondary { @apply btn border border-line-strong bg-surface text-ink no-underline hover:bg-paper-2; }
+@utility btn-ghost { @apply btn text-brand no-underline hover:bg-brand-tint; }
+@utility btn-danger { @apply btn border border-danger/30 bg-surface text-danger no-underline hover:bg-danger-tint; }
+@utility btn-sm { @apply px-3 py-1.5 text-xs min-h-8; }
+
+/* Form */
+@utility label { @apply mb-1.5 block text-sm font-semibold text-ink; }
+@utility hint { @apply mt-1.5 text-xs text-muted; }
+@utility field-error { @apply mt-1.5 text-xs font-medium text-danger; }
+@utility input {
+    @apply block w-full rounded-md border border-line-strong bg-surface px-3 py-2.5 text-sm text-ink
+        placeholder:text-muted/80 transition-colors focus:border-brand focus:outline-none
+        focus:ring-2 focus:ring-brand/20;
+
+    &[type='file'] {
+        @apply py-2 file:mr-3 file:rounded-sm file:border-0 file:bg-paper-2 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-ink;
+    }
+}
+
+/* Permukaan */
+@utility card { @apply rounded-md border border-line bg-surface; }
+@utility card-pad { @apply card p-5 sm:p-6; }
+
+/* Label status. Warna mengikuti arti, bukan dekorasi. */
+@utility badge { @apply inline-flex items-center gap-1 whitespace-nowrap rounded-sm px-2 py-0.5 text-xs font-semibold; }
+@utility badge-neutral { @apply badge bg-paper-2 text-ink-2; }
+@utility badge-brand { @apply badge bg-brand-tint text-brand; }
+@utility badge-brass { @apply badge bg-brass-tint text-brass; }
+@utility badge-danger { @apply badge bg-danger-tint text-danger; }
+
+/* Label punggung buku: lantai dan kode rak, seperti stiker di punggung buku perpustakaan. */
+@utility spine {
+    @apply inline-flex items-center rounded-sm border border-ink/15 bg-surface px-1.5 py-0.5
+        font-mono text-[11px] font-medium tracking-tight text-ink-2;
+}
+
+/* Tabel admin */
+@utility table-wrap { @apply card overflow-x-auto; }
+@utility table {
+    @apply w-full text-left text-sm;
+
+    & th { @apply border-b border-line bg-paper-2/60 px-4 py-2.5 text-xs font-semibold text-ink-2; }
+    & td { @apply border-b border-line px-4 py-3 align-middle; }
+    & tr:last-child td { @apply border-b-0; }
+}
+
+/* Slip tanggal kembali: tiket peminjaman meniru kartu jatuh tempo di sampul dalam buku. */
+@utility slip {
+    @apply relative rounded-md border border-line bg-surface;
+    background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 31px,
+        color-mix(in srgb, var(--color-line) 70%, transparent) 31px,
+        color-mix(in srgb, var(--color-line) 70%, transparent) 32px
+    );
+}
+@utility stamp {
+    @apply inline-block rotate-[-3deg] rounded-sm border-2 border-brass px-2.5 py-1 font-mono text-sm font-bold
+        uppercase tracking-wide text-brass;
+}
+
+@utility nav-link { @apply rounded-md px-3 py-2 text-sm font-medium text-ink-2 no-underline transition-colors hover:bg-paper-2 hover:text-ink; }
+@utility nav-link-active { @apply nav-link bg-brand-tint text-brand hover:bg-brand-tint hover:text-brand; }
+
+@utility prose-book {
+    & p + p { @apply mt-3; }
+}
+
+/* Rak horizontal: bisa digeser (sentuh, trackpad, atau tombol panah) tanpa scrollbar yang terlihat. */
+@utility no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
 }

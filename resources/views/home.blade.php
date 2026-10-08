@@ -1,126 +1,68 @@
-@extends('layout')
-
-@section('title', 'Home - Perpustakaan Kampus')
-
-@section('content')
-
-<section class="hero-modern">
-    <div class="hero-content">
-        <h1>Jelajahi Ribuan Buku <br>untuk <span class="text-highlight">Masa Depanmu</span></h1>
-        <p>Akses koleksi buku terlengkap dari berbagai kategori. Mulai dari Teknologi, Bisnis, hingga Novel Fiksi terbaik.</p>
-        <a href="{{ route('books.index') }}" class="btn-hero">Cari Buku Sekarang</a>
-    </div>
-</section>
-
-<div class="container main-content">
-
-    <div class="section-header">
-        <h2>Buku Terpopuler 🔥</h2>
-        <p>Paling banyak dipinjam minggu ini</p>
-    </div>
-
-    <div class="book-grid">
-        @forelse($topBooks as $book)
-        <div class="book-card">
-
-            <div class="book-cover" style="padding: 0; overflow: hidden; position: relative; background-color: #f0f0f0;">
-
-                @if(Auth::guard('student')->check())
-                @php
-                $isFav = Auth::guard('student')->user()->favorites->contains($book->id);
-                @endphp
-                <form action="{{ route('favorites.toggle', $book->id) }}" method="POST">
-                    @csrf
-                    <button type="submit" class="btn-wishlist" style="position: absolute; top: 10px; right: 10px; z-index: 20; background: rgba(255,255,255,0.8); border-radius: 50%; padding: 5px 8px;">
-                        <i class="fas fa-heart {{ $isFav ? 'active' : 'inactive' }}"></i>
-                    </button>
-                </form>
-                @endif
-
-                @if($book->cover)
-                <img src="{{ asset('storage/' . $book->cover) }}" alt="{{ $book->title }}" style="width: 100%; height: 100%; object-fit: cover;">
+<x-layouts.app>
+    <section class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold sm:text-3xl">
+                @auth('student')
+                    Halo, {{ \Illuminate\Support\Str::of(auth('student')->user()->name)->explode(' ')->first() }}. Mau baca apa hari ini?
                 @else
-                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-book-open text-white" style="font-size: 3rem; opacity: 0.7;"></i>
+                    Mau baca apa hari ini?
+                @endauth
+            </h1>
+            <p class="mt-1 text-sm text-muted">{{ $totalBooks }} judul di rak · {{ $ebookCount }} bisa dibaca daring · pesan dari sini, ambil di meja dengan QR</p>
+        </div>
+        <a href="{{ route('books.index') }}" class="btn-secondary">Buka katalog lengkap</a>
+    </section>
+
+    @foreach ($shelves as $shelf)
+        <section class="mt-10" aria-labelledby="rak-{{ $loop->index }}">
+            <div class="flex items-baseline justify-between gap-4">
+                <div class="flex flex-wrap items-baseline gap-x-3">
+                    <h2 id="rak-{{ $loop->index }}" class="text-base font-extrabold uppercase tracking-wide">{{ $shelf['title'] }}</h2>
+                    @if ($shelf['caption'])
+                        <span class="text-xs text-muted">{{ $shelf['caption'] }}</span>
+                    @endif
                 </div>
-                @endif
+                @isset($shelf['link'])
+                    <a href="{{ $shelf['link'] }}" class="shrink-0 text-sm font-semibold text-brand">Lihat semua</a>
+                @endisset
             </div>
 
-            <div class="book-info">
-                <span class="book-category">{{ $book->category->name }}</span>
+            {{-- Rak horizontal tanpa scrollbar: digeser dengan sentuhan/trackpad, atau tombol panah di desktop. --}}
+            <div class="group/shelf relative mt-4" data-shelf>
+                <div class="no-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-2" data-track>
+                    @foreach ($shelf['books'] as $book)
+                        <div class="w-32 shrink-0 snap-start sm:w-36">
+                            @include('books._card', ['book' => $book])
+                        </div>
+                    @endforeach
+                </div>
 
-                <h3 class="book-title">
-                    <a href="{{ route('books.show', $book->id) }}" style="text-decoration: none; color: inherit;">
-                        {{ Str::limit($book->title, 40) }}
-                    </a>
-                </h3>
-
-                <p class="book-author">{{ $book->author }}</p>
-
-                <a href="{{ route('books.show', $book->id) }}" style="font-size: 0.8rem; color: #5dade2; font-weight: 600;">Lihat Detail &rarr;</a>
-            </div>
-        </div>
-        @empty
-        <div class="empty-state">
-            <p>Belum ada data buku.</p>
-        </div>
-        @endforelse
-    </div>
-
-
-    <div class="section-header mt-large">
-        <h2>Rekomendasi Untukmu 📚</h2>
-        <p>Pilihan kurator perpustakaan spesial untuk kamu</p>
-    </div>
-
-    <div class="book-grid">
-        @forelse($featuredBooks as $book)
-        <div class="book-card">
-
-            <div class="book-cover" style="padding: 0; overflow: hidden; position: relative; background-color: #f0f0f0;">
-
-                @if(Auth::guard('student')->check())
-                @php
-                $isFav = Auth::guard('student')->user()->favorites->contains($book->id);
-                @endphp
-                <form action="{{ route('favorites.toggle', $book->id) }}" method="POST">
-                    @csrf
-                    <button type="submit" class="btn-wishlist" style="position: absolute; top: 10px; right: 10px; z-index: 20; background: rgba(255,255,255,0.8); border-radius: 50%; padding: 5px 8px;">
-                        <i class="fas fa-heart {{ $isFav ? 'active' : 'inactive' }}"></i>
+                @foreach (['prev' => ['left-0 -translate-x-1/2', 'arrow-left', 'Geser ke kiri'], 'next' => ['right-0 translate-x-1/2', 'arrow-right', 'Geser ke kanan']] as $dir => [$pos, $icon, $label])
+                    <button type="button" data-{{ $dir }}
+                            class="absolute top-[5.5rem] z-10 hidden h-10 w-10 place-items-center rounded-full border border-line bg-paper text-ink shadow-md shadow-ink/15 opacity-0 transition-opacity duration-150 hover:text-brand focus-visible:opacity-100 group-hover/shelf:opacity-100 disabled:!opacity-0 sm:top-24 md:grid {{ $pos }}">
+                        <x-icon :name="$icon" :size="18" />
+                        <span class="sr-only">{{ $label }}</span>
                     </button>
-                </form>
-                @endif
-
-                @if($book->cover)
-                <img src="{{ asset('storage/' . $book->cover) }}" alt="{{ $book->title }}" style="width: 100%; height: 100%; object-fit: cover;">
-                @else
-                <div style="width: 100%; height: 100%; background: linear-gradient(120deg, #f6d365 0%, #fda085 100%); display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-star text-white" style="font-size: 3rem; opacity: 0.7;"></i>
-                </div>
-                @endif
+                @endforeach
             </div>
+        </section>
+    @endforeach
 
-            <div class="book-info">
-                <span class="book-category">{{ $book->category->name }}</span>
-
-                <h3 class="book-title">
-                    <a href="{{ route('books.show', $book->id) }}" style="text-decoration: none; color: inherit;">
-                        {{ Str::limit($book->title, 40) }}
-                    </a>
-                </h3>
-
-                <p class="book-author">{{ $book->author }}</p>
-
-                <a href="{{ route('books.show', $book->id) }}" style="font-size: 0.8rem; color: #5dade2; font-weight: 600;">Lihat Detail &rarr;</a>
-            </div>
-        </div>
-        @empty
-        <div class="empty-state">
-            <p>Belum ada rekomendasi.</p>
-        </div>
-        @endforelse
-    </div>
-
-</div>
-
-@endsection
+    <script>
+        // Tombol panah menggeser rak sejauh lebar yang terlihat dan mati sendiri di ujung rak.
+        document.querySelectorAll('[data-shelf]').forEach((shelf) => {
+            const track = shelf.querySelector('[data-track]');
+            const prev = shelf.querySelector('[data-prev]');
+            const next = shelf.querySelector('[data-next]');
+            const update = () => {
+                prev.disabled = track.scrollLeft <= 4;
+                next.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 4;
+            };
+            prev.addEventListener('click', () => track.scrollBy({ left: -track.clientWidth * 0.85 }));
+            next.addEventListener('click', () => track.scrollBy({ left: track.clientWidth * 0.85 }));
+            track.addEventListener('scroll', update, { passive: true });
+            window.addEventListener('resize', update);
+            update();
+        });
+    </script>
+</x-layouts.app>

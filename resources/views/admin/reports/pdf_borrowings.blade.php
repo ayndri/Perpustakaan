@@ -1,114 +1,61 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="id">
 <head>
-    <title>Laporan Peminjaman</title>
+    <meta charset="utf-8">
+    <title>Laporan peminjaman</title>
     <style>
-        body {
-            font-family: sans-serif;
-            font-size: 10pt;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .header h2 {
-            margin: 0;
-        }
-
-        .header p {
-            margin: 5px 0;
-            color: #555;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th,
-        td {
-            border: 1px solid #333;
-            padding: 8px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #f2f2f2;
-        }
-
-        .status-badge {
-            font-weight: bold;
-        }
-
-        .footer {
-            margin-top: 50px;
-            text-align: right;
-        }
+        @page { margin: 28px 32px; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 9.5pt; color: #1d2622; }
+        h1 { font-size: 15pt; margin: 0; color: #1f4d3a; }
+        .meta { color: #5f6963; margin: 4px 0 14px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #efe9dc; text-align: left; padding: 6px 7px; font-size: 8.5pt; border-bottom: 1px solid #cfc3aa; }
+        td { padding: 6px 7px; border-bottom: 1px solid #e2d9c6; vertical-align: top; }
+        .mono { font-family: 'DejaVu Sans Mono', monospace; font-size: 8.5pt; }
+        .right { text-align: right; }
+        .late { color: #a3321f; font-weight: bold; }
+        .summary { margin-top: 14px; }
+        .summary td { border: 0; padding: 2px 0; }
     </style>
 </head>
-
 <body>
-
-    <div class="header">
-        <h2>PERPUSTAKAAN KAMPUS</h2>
-        <p>Jl. Pendidikan No. 123, Kota Coding, Indonesia</p>
-        <hr>
-        <h3>LAPORAN PEMINJAMAN BUKU</h3>
-        <p>Periode: {{ \Carbon\Carbon::parse($startDate)->format('d M Y') }} - {{ \Carbon\Carbon::parse($endDate)->format('d M Y') }}</p>
-    </div>
+    <h1>Laporan peminjaman PerpusKampus</h1>
+    <p class="meta">
+        Buku diserahkan {{ $startDate->translatedFormat('j F Y') }} sampai {{ $endDate->translatedFormat('j F Y') }}
+        · dicetak {{ now()->translatedFormat('j F Y, H.i') }}
+    </p>
 
     <table>
         <thead>
             <tr>
-                <th>No</th>
-                <th>Tanggal Pinjam</th>
-                <th>Mahasiswa</th>
-                <th>Judul Buku</th>
-                <th>Tipe</th>
-                <th>Status</th>
-                <th>Tgl Kembali</th>
+                <th>No</th><th>Tiket</th><th>Peminjam</th><th>Buku</th><th>Diserahkan</th><th>Jatuh tempo</th><th>Kembali</th><th>Status</th><th class="right">Denda</th>
             </tr>
         </thead>
         <tbody>
-            @foreach($borrowings as $index => $item)
-            <tr>
-                <td>{{ $index + 1 }}</td>
-                <td>{{ \Carbon\Carbon::parse($item->borrow_date)->format('d/m/Y') }}</td>
-                <td>
-                    {{ $item->student->name }}<br>
-                    <small>({{ $item->student->nim }})</small>
-                </td>
-                <td>{{ $item->book->title }}</td>
-                <td>{{ ucfirst($item->type) }}</td>
-                <td>
-                    @if($item->status == 'active') Sedang Dipinjam
-                    @elseif($item->status == 'returned') Selesai
-                    @elseif($item->status == 'pending') Menunggu
-                    @else {{ ucfirst($item->status) }}
-                    @endif
-                </td>
-                <td>
-                    @if($item->return_date_actual)
-                    {{ \Carbon\Carbon::parse($item->return_date_actual)->format('d/m/Y') }}
-                    @else
-                    -
-                    @endif
-                </td>
-            </tr>
-            @endforeach
+            @forelse ($borrowings as $i => $loan)
+                <tr>
+                    <td>{{ $i + 1 }}</td>
+                    <td class="mono">{{ $loan->ticket_number }}</td>
+                    <td>{{ $loan->student->name }}<br><span class="mono">{{ $loan->student->nim }}</span></td>
+                    <td>{{ $loan->book->title }}{{ $loan->type === 'online' ? ' (e-book)' : '' }}</td>
+                    <td>{{ tanggal($loan->handed_over_at) }}</td>
+                    <td>{{ tanggal($loan->due_at) }}</td>
+                    <td>{{ tanggal($loan->returned_at) }}</td>
+                    <td class="{{ $loan->isOverdue() ? 'late' : '' }}">
+                        {{ match (true) { $loan->isOverdue() => 'Telat '.$loan->daysLate().' hari', $loan->status === 'active' => 'Dipinjam', $loan->status === 'returned' => 'Kembali', default => ucfirst($loan->status) } }}
+                    </td>
+                    <td class="right">{{ $loan->currentFine() ? rupiah($loan->currentFine()).($loan->fine_paid_at ? ' (lunas)' : '') : '–' }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="9">Tidak ada buku yang diserahkan pada rentang ini.</td></tr>
+            @endforelse
         </tbody>
     </table>
 
-    <div class="footer">
-        <p>Dicetak pada: {{ date('d M Y H:i') }}</p>
-        <br><br><br>
-        <p>( _______________________ )<br>Kepala Perpustakaan</p>
-    </div>
-
+    <table class="summary">
+        <tr><td>Total peminjaman</td><td class="right">{{ $borrowings->count() }}</td></tr>
+        <tr><td>Masih dipinjam</td><td class="right">{{ $borrowings->where('status', 'active')->count() }}</td></tr>
+        <tr><td>Denda tercatat</td><td class="right">{{ rupiah($borrowings->sum(fn ($l) => $l->currentFine())) }}</td></tr>
+    </table>
 </body>
-
 </html>

@@ -1,107 +1,70 @@
-@extends('admin.layout')
-
-@section('content')
-
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Manajemen Buku</h1>
-    <a href="{{ route('admin.books.create') }}" class="btn btn-primary shadow-sm" style="background: #2c3e50; border:none;">
-        <i class="fas fa-plus fa-sm text-white-50"></i> Tambah Buku Baru
-    </a>
-</div>
-
-@if(session('success'))
-<div class="alert alert-success border-left-success" role="alert">
-    {{ session('success') }}
-</div>
-@endif
-
-<div class="card shadow mb-4">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
-                <thead class="thead-light">
-                    <tr>
-                        <th width="5%">No</th>
-                        <th>Judul Buku</th>
-                        <th>Kategori</th>
-                        <th>Stok Fisik</th>
-                        <th>Stok Online</th>
-                        <th>Lokasi</th>
-                        <th width="15%" class="no-sort">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($books as $book)
-                    <tr>
-                        <td>{{ $loop->iteration }}</td>
-                        <td>
-                            <span style="font-weight: 600; color: #333;">{{ $book->title }}</span><br>
-                            <small class="text-muted">{{ $book->author }} ({{ $book->year }})</small>
-                        </td>
-                        <td><span class="badge badge-secondary">{{ $book->category->name }}</span></td>
-                        <td>
-                            {{ $book->stock }}
-                            @if($book->stock < 3)
-                                <i class="fas fa-exclamation-circle text-danger" title="Stok Menipis"></i>
-                                @endif
-                        </td>
-                        <td>{{ $book->stock_online }}</td>
-                        <td>
-                            <span class="badge badge-light border">Lt. {{ $book->floor }}</span><br>
-                            <small class="font-weight-bold">{{ $book->shelf_code }}</small>
-                        </td>
-                        <td>
-                            <div class="d-flex" style="gap: 5px;">
-                                <a href="{{ route('admin.books.edit', $book->id) }}" class="btn btn-warning btn-sm btn-circle" title="Edit">
-                                    <i class="fas fa-pen"></i>
-                                </a>
-
-                                <form action="{{ route('admin.books.destroy', $book->id) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus buku ini?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-danger btn-sm btn-circle" title="Hapus">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
+<x-layouts.admin title="Koleksi">
+    <div class="max-w-6xl">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-semibold">Koleksi</h1>
+                <p class="mt-1 text-sm text-muted">{{ $books->total() }} judul</p>
+            </div>
+            <a href="{{ route('admin.books.create') }}" class="btn-primary"><x-icon name="plus" :size="16" /> Tambah buku</a>
         </div>
+
+        <form method="GET" class="mt-5 flex flex-wrap gap-2" role="search">
+            <label for="q" class="sr-only">Cari</label>
+            <input id="q" name="q" value="{{ $search }}" class="input w-72" placeholder="Judul, penulis, atau ISBN">
+            <label for="category" class="sr-only">Kategori</label>
+            <select id="category" name="category" class="input w-56">
+                <option value="">Semua kategori</option>
+                @foreach ($categories as $category)
+                    <option value="{{ $category->id }}" @selected(request('category') == $category->id)>{{ $category->name }}</option>
+                @endforeach
+            </select>
+            <button class="btn-secondary">Terapkan</button>
+        </form>
+
+        @if ($books->isEmpty())
+            <x-empty class="mt-6" title="Belum ada buku yang cocok" icon="book">
+                <x-slot:action><a href="{{ route('admin.books.create') }}" class="btn-secondary">Tambah buku</a></x-slot:action>
+            </x-empty>
+        @else
+            <div class="table-wrap mt-5">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Buku</th>
+                            <th>Rak</th>
+                            <th class="text-right" title="Eksemplar bebas di rak">Di rak</th>
+                            <th class="text-right" title="Tiket menunggu + sedang dipinjam">Keluar</th>
+                            <th class="text-right">Antre</th>
+                            <th class="text-right">E-book</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($books as $book)
+                            <tr>
+                                <td>
+                                    <div class="flex items-center gap-3">
+                                        <x-book-cover :book="$book" :width="80" class="w-9 shrink-0" />
+                                        <div class="min-w-0">
+                                            <a href="{{ route('books.show', $book) }}" class="font-medium text-ink">{{ $book->title }}</a>
+                                            <span class="block text-xs text-muted">{{ $book->author }} · {{ $book->category->name }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="whitespace-nowrap"><span class="spine">{{ $book->shelfLabel() ?? '–' }}</span></td>
+                                <td class="text-right font-semibold {{ $book->stock === 0 ? 'text-danger' : '' }}">{{ $book->stock }}</td>
+                                <td class="text-right text-ink-2">{{ $book->on_loan }}</td>
+                                <td class="text-right {{ $book->waiting ? 'font-semibold text-brass' : 'text-ink-2' }}">{{ $book->waiting ?: '–' }}</td>
+                                <td class="text-right text-ink-2">{{ $book->digital_link ? $book->stock_online : '–' }}</td>
+                                <td class="whitespace-nowrap text-right">
+                                    <a href="{{ route('admin.books.edit', $book) }}" class="btn-ghost btn-sm"><x-icon name="edit" :size="14" /> Ubah</a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-5">{{ $books->links() }}</div>
+        @endif
     </div>
-</div>
-
-@endsection
-
-@push('scripts')
-<link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap4.min.css" rel="stylesheet">
-<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap4.min.js"></script>
-
-<script>
-    $(document).ready(function() {
-        $('#dataTable').DataTable({
-            // Konfigurasi
-            "columnDefs": [{
-                    "targets": 5,
-                    "orderable": false
-                } // Matikan sorting di kolom Aksi (index 5)
-            ],
-            "language": {
-                "search": "Cari Buku:",
-                "lengthMenu": "Tampilkan _MENU_ data",
-                "zeroRecords": "Data tidak ditemukan",
-                "info": "Hal _PAGE_ dari _PAGES_",
-                "infoEmpty": "Kosong",
-                "infoFiltered": "(filter dari _MAX_ total)",
-                "paginate": {
-                    "next": ">",
-                    "previous": "<"
-                }
-            }
-        });
-    });
-</script>
-@endpush
+</x-layouts.admin>

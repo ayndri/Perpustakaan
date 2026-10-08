@@ -1,91 +1,51 @@
-@extends('layout')
+<x-layouts.app title="Verifikasi KTM">
+    <div class="mx-auto max-w-xl">
+        <h1 class="text-3xl font-semibold">Verifikasi KTM</h1>
+        <p class="mt-1 text-ink-2">Admin mencocokkan nama dan NIM di KTM dengan data akunmu. Setelah itu kamu bisa meminjam dan antre buku.</p>
 
-@section('title', 'Verifikasi Akun')
-
-@section('content')
-<div class="container main-content mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm border-0 rounded-lg">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 font-weight-bold text-primary"><i class="fas fa-id-card mr-2"></i> Verifikasi Identitas</h5>
+        @switch($student->verification_status)
+            @case('verified')
+                <div class="card-pad mt-6 flex items-center gap-4">
+                    <span class="grid h-11 w-11 place-items-center rounded-full bg-brand-tint text-brand"><x-icon name="check" /></span>
+                    <div>
+                        <p class="font-semibold">Akunmu sudah terverifikasi.</p>
+                        <a href="{{ route('books.index') }}" class="text-sm font-semibold text-brand">Mulai pinjam buku</a>
+                    </div>
                 </div>
-                <div class="card-body p-4">
+                @break
 
-                    @if($student->verification_status == 'verified')
-                    <div class="text-center py-4">
-                        <div style="width: 80px; height: 80px; background: #d4edda; color: #155724; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 20px;">
-                            <i class="fas fa-check"></i>
-                        </div>
-                        <h3 class="font-weight-bold text-success">Akun Terverifikasi</h3>
-                        <p class="text-muted">Anda sudah dapat meminjam buku di perpustakaan.</p>
-                        <img src="{{ asset('storage/' . $student->ktm_image) }}" class="img-thumbnail mt-3" style="max-height: 200px;">
+            @case('pending')
+                <div class="card-pad mt-6 flex items-center gap-4">
+                    <span class="grid h-11 w-11 place-items-center rounded-full bg-brass-tint text-brass"><x-icon name="clock" /></span>
+                    <div>
+                        <p class="font-semibold">KTM sedang diperiksa.</p>
+                        <p class="text-sm text-muted">Dikirim {{ tanggal($student->updated_at, true) }}. Kamu bisa mengunggah ulang kalau fotonya kurang jelas.</p>
                     </div>
-
-                    @elseif($student->verification_status == 'pending')
-                    <div class="text-center py-4">
-                        <div style="width: 80px; height: 80px; background: #fff3cd; color: #856404; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 20px;">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <h4 class="font-weight-bold text-warning">Menunggu Verifikasi Admin</h4>
-                        <p class="text-muted">Kami sedang mengecek data KTM Anda. Proses ini biasanya memakan waktu 1x24 jam.</p>
-                    </div>
-
-                    @else
-                    @if($student->verification_status == 'rejected')
-                    <div class="alert alert-danger mb-4">
-                        <strong><i class="fas fa-times-circle"></i> Verifikasi Ditolak!</strong>
-                        <p class="mb-0">{{ $student->rejection_reason }}</p>
-                    </div>
-                    @endif
-
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle mr-1"></i> Untuk meminjam buku, Anda wajib mengunggah foto <strong>Kartu Tanda Mahasiswa (KTM)</strong> yang masih berlaku.
-                    </div>
-
-                    <form action="{{ route('verification.store') }}" method="POST" enctype="multipart/form-data">
-                        @csrf
-                        <div class="form-group">
-                            <label class="font-weight-bold">Upload Foto KTM</label>
-                            <div class="custom-file">
-                                <input type="file" class="custom-file-input" id="ktmFile" name="ktm_image" required accept="image/*" onchange="previewImage()">
-                                <label class="custom-file-label" for="ktmFile">Pilih file foto...</label>
-                            </div>
-                            <small class="text-muted">Format: JPG, PNG. Maks: 2MB.</small>
-                        </div>
-
-                        <div class="mt-3 text-center d-none" id="previewContainer">
-                            <img id="imgPreview" src="#" alt="Preview KTM" class="img-thumbnail" style="max-height: 250px;">
-                        </div>
-
-                        <button type="submit" class="btn btn-primary btn-block mt-4 py-2 font-weight-bold" style="background: #2c3e50; border: none;">
-                            <i class="fas fa-upload mr-2"></i> Unggah KTM
-                        </button>
-                    </form>
-                    @endif
-
                 </div>
-            </div>
-        </div>
+                @break
+
+            @case('rejected')
+                <div class="mt-6 rounded-md border border-danger/25 bg-danger-tint px-5 py-4 text-danger">
+                    <p class="font-semibold">Verifikasi ditolak</p>
+                    <p class="text-sm">Alasan dari admin: {{ $student->rejection_reason }}</p>
+                </div>
+                @break
+        @endswitch
+
+        @unless ($student->isVerified())
+            <form method="POST" action="{{ route('verification.store') }}" enctype="multipart/form-data" class="card-pad mt-6 space-y-4">
+                @csrf
+                <div>
+                    <label for="ktm_image" class="label">Foto KTM</label>
+                    <input id="ktm_image" name="ktm_image" type="file" accept="image/jpeg,image/png" class="input" required>
+                    <p class="hint">JPG atau PNG, maksimal 2 MB. Pastikan nama dan NIM terbaca.</p>
+                </div>
+                <p class="flex items-start gap-2 rounded-md bg-paper-2 px-3 py-2.5 text-xs text-ink-2">
+                    <x-icon name="info" :size="15" class="mt-px" />
+                    Foto KTM disimpan privat. Tidak ada tautan publik ke file ini; hanya admin yang bisa membukanya lewat panel admin.
+                </p>
+                <button class="btn-primary">{{ $student->ktm_image ? 'Kirim ulang KTM' : 'Kirim KTM' }}</button>
+            </form>
+        @endunless
     </div>
-</div>
-
-<script>
-    function previewImage() {
-        const file = document.getElementById('ktmFile').files[0];
-        const previewContainer = document.getElementById('previewContainer');
-        const imgPreview = document.getElementById('imgPreview');
-        const label = document.querySelector('.custom-file-label');
-
-        if (file) {
-            label.textContent = file.name;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imgPreview.src = e.target.result;
-                previewContainer.classList.remove('d-none');
-            }
-            reader.readAsDataURL(file);
-        }
-    }
-</script>
-@endsection
+</x-layouts.app>

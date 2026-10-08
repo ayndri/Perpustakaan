@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use App\Support\Media;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -49,8 +50,32 @@ class Student extends Authenticatable
         return $this->hasMany(Reservation::class);
     }
 
+    public function bookRequests()
+    {
+        return $this->hasMany(BookRequest::class);
+    }
+
     public function favorites()
     {
         return $this->belongsToMany(Book::class, 'favorites', 'student_id', 'book_id')->withTimestamps();
+    }
+
+    public function photoUrl(): ?string
+    {
+        return Media::url($this->photo, 200);
+    }
+
+    public function isVerified(): bool
+    {
+        return $this->verification_status === 'verified';
+    }
+
+    /** Total denda yang belum dilunasi, termasuk denda berjalan dari buku yang masih telat. */
+    public function outstandingFine(): int
+    {
+        $locked = (int) $this->borrowings()->unpaidFine()->sum('fine_amount');
+        $running = $this->borrowings()->overdue()->get()->sum(fn ($b) => $b->currentFine());
+
+        return $locked + $running;
     }
 }

@@ -1,61 +1,45 @@
-@extends('admin.layout')
+<x-layouts.admin title="Laporan">
+    <div class="max-w-4xl">
+        <h1 class="text-3xl font-semibold">Laporan</h1>
+        <p class="mt-1 text-ink-2">Semua laporan dibuat sebagai PDF dan terbuka di tab baru.</p>
 
-@section('content')
-
-<h1 class="h3 mb-4 text-gray-800 font-weight-bold">Laporan Perpustakaan</h1>
-
-<div class="row">
-    <div class="col-lg-6">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 bg-primary text-white">
-                <h6 class="m-0 font-weight-bold"><i class="fas fa-file-alt mr-2"></i> Laporan Transaksi Peminjaman</h6>
-            </div>
-            <div class="card-body">
-                <form action="{{ route('admin.reports.print_borrowings') }}" method="GET" target="_blank">
-                    <div class="form-group">
-                        <label>Dari Tanggal</label>
-                        <input type="date" name="start_date" class="form-control" value="{{ date('Y-m-01') }}" required>
+        <div class="mt-6 grid gap-5 md:grid-cols-2">
+            <form method="GET" action="{{ route('admin.reports.borrowings') }}" target="_blank" class="card-pad space-y-4">
+                <div>
+                    <h2 class="text-xl font-semibold">Peminjaman</h2>
+                    <p class="text-sm text-muted">Buku yang diserahkan dalam rentang tanggal, lengkap dengan status kembali dan denda.</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="start_date" class="label">Dari</label>
+                        <input id="start_date" name="start_date" type="date" value="{{ now()->startOfMonth()->toDateString() }}" class="input" required>
                     </div>
-                    <div class="form-group">
-                        <label>Sampai Tanggal</label>
-                        <input type="date" name="end_date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                    <div>
+                        <label for="end_date" class="label">Sampai</label>
+                        <input id="end_date" name="end_date" type="date" value="{{ now()->toDateString() }}" class="input" required>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-block">
-                        <i class="fas fa-print mr-2"></i> Cetak PDF
-                    </button>
-                </form>
-            </div>
+                </div>
+                <button class="btn-primary"><x-icon name="file" :size="16" /> Buat PDF</button>
+            </form>
+
+            <form method="GET" action="{{ route('admin.reports.members') }}" target="_blank" class="card-pad space-y-4">
+                <div>
+                    <h2 class="text-xl font-semibold">Anggota</h2>
+                    <p class="text-sm text-muted">Daftar anggota beserta status verifikasinya.</p>
+                </div>
+                <div>
+                    <label for="jurusan" class="label">Program studi</label>
+                    <select id="jurusan" name="jurusan" class="input">
+                        <option value="">Semua program studi</option>
+                        @foreach ($majors as $major)
+                            <option value="{{ $major }}">{{ $major }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <button class="btn-primary"><x-icon name="file" :size="16" /> Buat PDF</button>
+            </form>
         </div>
+
+        <p class="mt-6 text-sm text-muted">Kartu anggota dengan QR dicetak per orang dari halaman <a href="{{ route('admin.students.index') }}" class="font-semibold text-brand">Anggota</a>.</p>
     </div>
-
-    <div class="col-lg-6">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 bg-success text-white">
-                <h6 class="m-0 font-weight-bold"><i class="fas fa-users mr-2"></i> Laporan Data Anggota</h6>
-            </div>
-            <div class="card-body">
-                <form action="{{ route('admin.reports.print_members') }}" method="GET" target="_blank">
-
-                    <div class="form-group">
-                        <label>Filter Jurusan</label>
-                        <select name="jurusan" class="form-control">
-                            <option value="Semua">-- Semua Jurusan --</option>
-                            <option value="Teknik Informatika">Teknik Informatika</option>
-                            <option value="Sistem Informasi">Sistem Informasi</option>
-                            <option value="Teknik Sipil">Teknik Sipil</option>
-                            <option value="Manajemen">Manajemen</option>
-                            <option value="Akuntansi">Akuntansi</option>
-                        </select>
-                        <small class="text-muted">Pilih "Semua Jurusan" untuk mencetak seluruh data.</small>
-                    </div>
-
-                    <button type="submit" class="btn btn-success btn-block">
-                        <i class="fas fa-print mr-2"></i> Cetak PDF Anggota
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-@endsection
+</x-layouts.admin>

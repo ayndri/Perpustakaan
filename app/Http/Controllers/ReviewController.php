@@ -2,46 +2,32 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Borrowing;
+use App\Models\Book;
 use App\Models\Review;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class ReviewController extends Controller
 {
-    public function store(Request $request, $bookId)
+    public function store(Request $request, Book $book)
     {
-        $request->validate([
+        $data = $request->validate([
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:500',
         ]);
 
-        $studentId = Auth::guard('student')->id();
+        $student = auth('student')->user();
 
-        $hasBorrowed = Borrowing::where('student_id', $studentId)
-            ->where('book_id', $bookId)
-            ->where('status', 'returned')
-            ->exists();
-
-        if (!$hasBorrowed) {
-            return back()->with('error', 'Anda harus meminjam dan membaca buku ini sebelum memberi ulasan.');
+        $hasRead = $student->borrowings()->where('book_id', $book->id)->where('status', 'returned')->exists();
+        if (! $hasRead) {
+            return back()->with('error', 'Ulasan dibuka setelah kamu meminjam dan mengembalikan buku ini.');
         }
 
-        $existingReview = Review::where('student_id', $studentId)
-            ->where('book_id', $bookId)
-            ->exists();
-
-        if ($existingReview) {
-            return back()->with('error', 'Anda sudah memberikan ulasan untuk buku ini.');
+        if (Review::where('student_id', $student->id)->where('book_id', $book->id)->exists()) {
+            return back()->with('error', 'Kamu sudah mengulas buku ini.');
         }
 
-        Review::create([
-            'student_id' => $studentId,
-            'book_id' => $bookId,
-            'rating' => $request->rating,
-            'comment' => $request->comment
-        ]);
+        Review::create($data + ['student_id' => $student->id, 'book_id' => $book->id]);
 
-        return back()->with('success', 'Terima kasih atas ulasan Anda!');
+        return back()->with('success', 'Terima kasih, ulasanmu sudah tampil.');
     }
 }

@@ -2,16 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Media;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class VerificationController extends Controller
 {
     public function index()
     {
-        $student = Auth::guard('student')->user();
-        return view('verification.index', compact('student'));
+        return view('verification.index', ['student' => auth('student')->user()]);
     }
 
     public function store(Request $request)
@@ -20,20 +18,21 @@ class VerificationController extends Controller
             'ktm_image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        $student = Auth::guard('student')->user();
+        $student = auth('student')->user();
 
-        if ($student->ktm_image) {
-            Storage::disk('public')->delete($student->ktm_image);
+        if ($student->isVerified()) {
+            return back()->with('error', 'Akunmu sudah terverifikasi.');
         }
 
-        $path = $request->file('ktm_image')->store('ktm_uploads', 'public');
+        Media::delete($student->ktm_image);
 
+        // KTM memuat data pribadi, jadi selalu disimpan privat dan hanya bisa dibuka admin.
         $student->update([
-            'ktm_image' => $path,
+            'ktm_image' => Media::store($request->file('ktm_image'), 'ktm', private: true),
             'verification_status' => 'pending',
-            'rejection_reason' => null
+            'rejection_reason' => null,
         ]);
 
-        return redirect()->back()->with('success', 'KTM berhasil diunggah. Mohon tunggu verifikasi Admin.');
+        return back()->with('success', 'KTM terkirim. Admin biasanya memeriksa dalam satu hari kerja.');
     }
 }

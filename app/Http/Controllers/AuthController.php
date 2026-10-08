@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -16,28 +15,23 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
-        $request->validate([
-            'nim' => 'required|unique:students,nim',
-            'name' => 'required',
+        $data = $request->validate([
+            'nim' => 'required|string|max:20|unique:students,nim',
+            'name' => 'required|string|max:255',
             'email' => 'required|email|unique:students,email',
-            'jurusan' => 'required',
-            'password' => 'required|min:6|confirmed',
-            'gender' => 'required|in:L,P'
+            'jurusan' => 'required|string|max:100',
+            'gender' => 'required|in:L,P',
+            'password' => 'required|min:8|confirmed',
         ]);
 
-        Student::create([
-            'nim' => $request->nim,
-            'name' => $request->name,
-            'email' => $request->email,
-            'jurusan' => $request->jurusan,
-            'gender' => $request->gender,
-            'password' => Hash::make($request->password),
-        ]);
+        // Password di-hash oleh cast 'hashed' di model.
+        $student = Student::create($data);
 
-        // Auto Login setelah register (Opsional)
-        // Auth::guard('student')->attempt(['email' => $request->email, 'password' => $request->password]);
+        Auth::guard('student')->login($student);
+        $request->session()->regenerate();
 
-        return redirect()->route('login')->with('success', 'Registrasi berhasil! Silakan login.');
+        return redirect()->route('verification.index')
+            ->with('success', 'Akun dibuat. Satu langkah lagi: unggah KTM supaya bisa meminjam.');
     }
 
     public function showLogin()
@@ -47,19 +41,18 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $request->validate([
+        $credentials = $request->validate([
             'email' => 'required|email',
             'password' => 'required',
         ]);
 
-        if (Auth::guard('student')->attempt(['email' => $request->email, 'password' => $request->password])) {
+        if (Auth::guard('student')->attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
-            return redirect()->intended('/');
+
+            return redirect()->intended(route('home'));
         }
 
-        return back()->withErrors([
-            'email' => 'Email atau password salah.',
-        ]);
+        return back()->withErrors(['email' => 'Email atau password tidak cocok.'])->onlyInput('email');
     }
 
     public function logout(Request $request)
@@ -67,6 +60,7 @@ class AuthController extends Controller
         Auth::guard('student')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect('/');
+
+        return redirect()->route('home');
     }
 }

@@ -3,66 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\Book;
-use App\Models\Borrowing;
 use App\Models\Reservation;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Services\Circulation;
 
 class ReservationController extends Controller
 {
-    public function store($bookId)
+    public function __construct(private Circulation $circulation) {}
+
+    public function store(Book $book)
     {
-        $studentId = Auth::guard('student')->id();
+        $reservation = $this->circulation->reserve(auth('student')->user(), $book);
 
-        $activeCount = Reservation::where('student_id', $studentId)
-            ->whereIn('status', ['pending', 'available'])
-            ->count();
-
-        if ($activeCount >= 2) {
-            return back()->with('error', 'Anda hanya boleh melakukan reservasi maksimal 2 buku sekaligus.');
-        }
-
-        $isBorrowing = Borrowing::where('student_id', $studentId)
-            ->where('book_id', $bookId)
-            ->where('status', 'active')
-            ->exists();
-
-        if ($isBorrowing) {
-            return back()->with('error', 'Anda sedang meminjam buku ini. Tidak bisa booking.');
-        }
-
-        $book = Book::findOrFail($bookId);
-
-        if ($book->stock > 0) {
-            return back()->with('error', 'Stok buku tersedia, silakan langsung pinjam!');
-        }
-
-        $existing = Reservation::where('student_id', $studentId)
-            ->where('book_id', $bookId)
-            ->whereIn('status', ['pending', 'available'])
-            ->first();
-
-        if ($existing) {
-            return back()->with('error', 'Anda sudah masuk antrian untuk buku ini.');
-        }
-
-        Reservation::create([
-            'student_id' => $studentId,
-            'book_id' => $bookId,
-            'status' => 'pending'
-        ]);
-
-        return back()->with('success', 'Berhasil booking! Anda akan diberitahu jika buku sudah tersedia.');
+        return back()->with('success', 'Kamu masuk antrean di urutan ke-'.$reservation->position().'. Kami kabari begitu eksemplarnya disisihkan untukmu.');
     }
 
-    public function cancel($id)
+    public function cancel(Reservation $reservation)
     {
-        $reservation = Reservation::where('student_id', Auth::guard('student')->id())
-            ->where('id', $id)
-            ->firstOrFail();
+        $this->circulation->cancelReservation(auth('student')->user(), $reservation);
 
-        $reservation->update(['status' => 'cancelled']);
-
-        return back()->with('success', 'Booking berhasil dibatalkan.');
+        return back()->with('success', 'Kamu keluar dari antrean.');
     }
 }

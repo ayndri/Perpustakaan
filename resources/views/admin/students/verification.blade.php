@@ -1,154 +1,42 @@
-@extends('admin.layout')
+<x-layouts.admin title="Verifikasi KTM">
+    <div class="max-w-5xl">
+        <h1 class="text-3xl font-semibold">Verifikasi KTM</h1>
+        <p class="mt-1 text-ink-2">Cocokkan nama dan NIM di foto KTM dengan data akun. Yang paling lama menunggu ada di atas.</p>
 
-@section('content')
+        @forelse ($students as $student)
+            <article class="card mt-5 grid gap-5 p-5 md:grid-cols-[minmax(0,22rem)_1fr]">
+                <a href="{{ route('admin.students.ktm', $student) }}" target="_blank" rel="noopener" class="block overflow-hidden rounded-md border border-line bg-paper-2">
+                    <img src="{{ route('admin.students.ktm', $student) }}" alt="Foto KTM {{ $student->name }}" class="max-h-64 w-full object-contain" loading="lazy">
+                </a>
+                <div class="flex flex-col">
+                    <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                        <div class="col-span-2"><dt class="text-muted">Nama di akun</dt><dd class="text-lg font-semibold">{{ $student->name }}</dd></div>
+                        <div><dt class="text-muted">NIM di akun</dt><dd class="font-mono text-base">{{ $student->nim }}</dd></div>
+                        <div><dt class="text-muted">Program studi</dt><dd>{{ $student->jurusan }}</dd></div>
+                        <div class="col-span-2"><dt class="text-muted">Dikirim</dt><dd>{{ tanggal($student->updated_at, true) }}</dd></div>
+                    </dl>
 
-<h1 class="h3 mb-4 text-gray-800 font-weight-bold">Verifikasi KTM Mahasiswa</h1>
-
-@if(session('success'))
-<div class="alert alert-success border-left-success shadow-sm">
-    <i class="fas fa-check-circle mr-2"></i> {{ session('success') }}
-</div>
-@endif
-
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Daftar Antrian Verifikasi</h6>
+                    <div class="mt-auto flex flex-wrap items-start gap-2 pt-5">
+                        <form method="POST" action="{{ route('admin.students.approve', $student) }}">
+                            @csrf
+                            <button class="btn-primary"><x-icon name="check" :size="16" /> Cocok, verifikasi</button>
+                        </form>
+                        <details class="group">
+                            <summary class="btn-danger cursor-pointer list-none [&::-webkit-details-marker]:hidden">Tolak</summary>
+                            <form method="POST" action="{{ route('admin.students.reject', $student) }}" class="mt-2 flex gap-2">
+                                @csrf
+                                <label for="reason-{{ $student->id }}" class="sr-only">Alasan penolakan</label>
+                                <input id="reason-{{ $student->id }}" name="reason" class="input w-64" required placeholder="Contoh: foto buram, NIM tidak terbaca">
+                                <button class="btn-danger shrink-0">Kirim</button>
+                            </form>
+                        </details>
+                    </div>
+                </div>
+            </article>
+        @empty
+            <x-empty class="mt-6" title="Tidak ada KTM yang menunggu" icon="id">
+                KTM yang diunggah mahasiswa akan muncul di sini.
+            </x-empty>
+        @endforelse
     </div>
-
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-bordered" id="tableVerifikasiKTM" width="100%" cellspacing="0">
-                <thead>
-                    <tr>
-                        <th>Mahasiswa</th>
-                        <th>Foto KTM</th>
-                        <th>Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($pendingStudents as $student)
-                    <tr>
-                        <td>
-                            <div class="font-weight-bold">{{ $student->name }}</div>
-                            <div class="small text-muted">{{ $student->nim }}</div>
-                            <div class="small text-muted">{{ $student->jurusan }}</div>
-                        </td>
-
-                        <td class="text-center">
-                            <button type="button"
-                                class="btn btn-sm btn-info"
-                                data-toggle="modal"
-                                data-target="#ktmModal{{ $student->id }}">
-                                <i class="fas fa-image"></i> Lihat KTM
-                            </button>
-
-                            <!-- Modal KTM -->
-                            <div class="modal fade" id="ktmModal{{ $student->id }}" tabindex="-1">
-                                <div class="modal-dialog modal-dialog-centered">
-                                    <div class="modal-content">
-                                        <div class="modal-body text-center">
-                                            <img src="{{ asset('storage/' . $student->ktm_image) }}"
-                                                class="img-fluid rounded">
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button"
-                                                class="btn btn-secondary"
-                                                data-dismiss="modal">
-                                                Tutup
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
-
-                        <td>
-                            <div class="d-flex" style="gap: 5px;">
-                                <form action="{{ route('admin.students.approve', $student->id) }}"
-                                    method="POST"
-                                    onsubmit="return confirm('Verifikasi mahasiswa ini?')">
-                                    @csrf
-                                    <button type="submit" class="btn btn-success btn-sm">
-                                        <i class="fas fa-check"></i> Terima
-                                    </button>
-                                </form>
-
-                                <button type="button"
-                                    class="btn btn-danger btn-sm"
-                                    data-toggle="modal"
-                                    data-target="#rejectModal{{ $student->id }}">
-                                    <i class="fas fa-times"></i> Tolak
-                                </button>
-                            </div>
-
-                            <!-- Modal Tolak -->
-                            <div class="modal fade" id="rejectModal{{ $student->id }}" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <form action="{{ route('admin.students.reject', $student->id) }}" method="POST">
-                                            @csrf
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Tolak Verifikasi</h5>
-                                                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <div class="form-group">
-                                                    <label>Alasan Penolakan</label>
-                                                    <textarea name="reason"
-                                                        class="form-control"
-                                                        required
-                                                        placeholder="Contoh: Foto buram / Bukan KTM asli"></textarea>
-                                                </div>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="submit" class="btn btn-danger">
-                                                    Kirim Penolakan
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-@endsection
-
-@push('scripts')
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap4.min.css">
-<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap4.min.js"></script>
-
-<script>
-    $(document).ready(function() {
-
-        $('#tableVerifikasiKTM').DataTable({
-            order: [],
-            columnDefs: [{
-                targets: 2,
-                orderable: false
-            }],
-            language: {
-                emptyTable: "Tidak ada antrian verifikasi KTM.",
-                lengthMenu: "Tampilkan _MENU_ data",
-                search: "Cari Mahasiswa:",
-                zeroRecords: "Data tidak ditemukan",
-                info: "Hal _PAGE_ dari _PAGES_",
-                infoEmpty: "Kosong",
-                infoFiltered: "(difilter dari _MAX_ data)",
-                paginate: {
-                    next: ">",
-                    previous: "<"
-                }
-            }
-        });
-
-    });
-</script>
-@endpush
+</x-layouts.admin>
