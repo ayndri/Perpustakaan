@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex">
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
+    <link rel="stylesheet" href="{{ asset_v('css/app.css') }}">
 </head>
 <body class="grid min-h-screen place-items-center px-4 py-10">
     <main class="w-full max-w-sm">
